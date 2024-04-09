@@ -1,0 +1,13 @@
+---
+- name: Création d'un VLAN sur le switch Cisco
+  hosts: switches
+  gather_facts: no
+
+  tasks:
+    - name: Création VLAN Test ID 299
+      cisco.ios.ios_vlans:
+        config:
+          - name: Vlan_Test2
+            vlan_id: 399
+            state: active
+            shutdown: disabled
