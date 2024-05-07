@@ -3,6 +3,6 @@ SW-Coeur ansible_host=10.99.1.100
 
 [switches:vars]
 ansible_network_os=ios
-ansible_user=admin
-ansible_password=AsxDrt1234*
+ansible_user=*****
+ansible_password=*******
 ansible_connection=network_cli
