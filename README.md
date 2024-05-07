@@ -16,5 +16,10 @@ sudo ansible-galaxy collection install cisco.ios (Collection que j'utilise pour 
 
 # Connexion en ssh de la machine mère vers les switchs et le routeur pour échanger les clés et qu'Ansible puisse s'y connecter en ssh
 
+Pour les switchs:
+
 ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-rsa -c aes128-cbc user@ip
 
+Pour le routeur:
+
+ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-rsa -c aes128-ctr user@ip
