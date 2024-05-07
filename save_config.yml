@@ -1,6 +1,6 @@
 ---
 - name: Enregistrer la configuration
-  hosts: nodes
+  hosts: switches
   connection: local
   gather_facts: no
 
