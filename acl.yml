@@ -1,6 +1,6 @@
 ---
 - name: Créer une ACL sur le switch Cisco
-  hosts: cisco
+  hosts: switches
   gather_facts: no
 
   tasks:
