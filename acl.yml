@@ -1,0 +1,14 @@
+---
+- name: Créer une ACL sur le switch Cisco
+  hosts: cisco
+  gather_facts: no
+
+  tasks:
+    - name: Créer une ACL
+      ios_acl:
+        name: 101
+        rules:
+          - protocol: icmp
+            source: 10.99.1.0 0.0.0.255
+            destination: 172.16.1.0 0.0.0.255
+            action: permit
