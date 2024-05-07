@@ -13,6 +13,8 @@ sudo pip3 install ansible (Pour avoir Ansible à la dernière version)
 
 sudo ansible-galaxy collection install cisco.ios (Collection que j'utilise pour récupérer différents modules que j'utiliserais dans mes scripts).
 
+sudo pip3 install ansible-pylibssh
+
 
 # Connexion en ssh de la machine mère vers les switchs et le routeur pour échanger les clés et qu'Ansible puisse s'y connecter en ssh
 
