@@ -1,16 +1,15 @@
 ---
 - name: Enregistrer la configuration
-  hosts: switches
-  connection: local
+  hosts: cisco
   gather_facts: no
 
   tasks:
     - name: Get Configuration
-      commands:
-        - show running config
+      cisco.ios.ios_command:
+        commands: show run
       register: config
 
     - name: Save it in file
       copy:
         content: "{{ config.stdout[0] }}"
-        dest: "/home/user/{{ inventory_hostname }}_config.txt"
+        dest: "/home/sio/{{ inventory_hostname }}_config.txt"
