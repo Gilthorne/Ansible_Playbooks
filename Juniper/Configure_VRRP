@@ -1,0 +1,93 @@
+---
+- name: Configurer VRRP sur des commutateurs Juniper
+  hosts: nodes
+  connection: ansible.netcommon.netconf
+  gather_facts: no
+  vars:
+    interface_physique: "{{ lookup('env', 'VRRP') }}"
+    unit: "{{ lookup('env', 'VRRP') }}"
+    ip_interface: "{{ lookup('env', 'VRRP') }}"
+    ip_groupe: "{{ lookup('env', 'VRRP') }}"
+    vrrp_groupe: "{{ lookup('env', 'VRRP') }}"
+    priority: "{{ lookup('env', 'VRRP') }}"
+    hold_time: "{{ lookup('env', 'VRRP') }}"
+    hostname: "{{ lookup('env', 'VRRP') }}"
+    add_command: "{{ lookup('env', 'VRRP') }}"
+    interface_physiqueB: "{{ lookup('env', 'VRRP') }}"
+    unitB: "{{ lookup('env', 'VRRP') }}"
+    ip_interfaceB: "{{ lookup('env', 'VRRP') }}"
+    ip_groupeB: "{{ lookup('env', 'VRRP') }}"
+    vrrp_groupeB: "{{ lookup('env', 'VRRP') }}"
+    priorityB: "{{ lookup('env', 'VRRP') }}"
+    hostnameB: "{{ lookup('env', 'VRRP') }}"
+    add_commandB: "{{ lookup('env', 'VRRP') }}"
+    hold_timeB: "{{ lookup('env', 'VRRP') }}"
+  tasks:
+    - name: recupérer hardware
+      junipernetworks.junos.junos_facts:
+        gather_subset:
+          - hardware
+
+    - name: show interface$
+      ansible.builtin.debug:
+        msg: delete interfaces "{{ item }}"
+      loop: "{{ interface_physique }}"
+
+    - name: supp des configuration des interfaces
+      junipernetworks.junos.junos_config:
+        lines:
+          - delete interfaces "{{ item }}" unit 0 family ethernet-switching
+          - delete interfaces "{{ interface_physiqueB }}" unit 0 family ethernet-switching
+      loop: "{{ interface_physique }}"
+
+    - name: Configurer l'interface avec VRRP sur Switch A
+      junipernetworks.junos.junos_config:
+        lines:
+          - delete interfaces "{{ item }}" unit "{{ unit }}"
+          - set interfaces "{{ item }}" unit "{{ unit }}" family inet address "{{ ip_interface }}" vrrp-group "{{ vrrp_groupe }}" virtual-address "{{ ip_groupe }}"
+          - set interfaces "{{ item }}" unit "{{ unit }}" family inet address "{{ ip_interface }}" vrrp-group "{{ vrrp_groupe }}" priority "{{ priority }}"
+          - set interfaces "{{ item }}" unit "{{ unit }}" family inet address "{{ ip_interface }}" vrrp-group "{{ vrrp_groupe }}" preempt hold-time "{{ hold_time }}"
+          - set interfaces "{{ item }}" unit "{{ unit }}" family inet address "{{ ip_interface }}" vrrp-group "{{ vrrp_groupe }}" accept-data
+          - set protocols rstp interface "{{ item }}" disable
+#          - "{{ add_command }}"
+      loop: "{{ interface_physique }}"
+      when: ansible_net_hostname == "{{ hostname }}"
+
+    - name: Message de confirmation
+      debug:
+        msg: "{{ item }}"
+      loop: "{{ interface_physiqueB }}"
+
+    - name: Configurer l'interface avec VRRP sur Switch B
+      junipernetworks.junos.junos_config:
+        lines:
+          - delete interfaces "{{ item }}" unit "{{ unitB }}"
+          - set interfaces "{{ item }}" unit "{{ unitB }}" family inet address "{{ ip_interfaceB }}" vrrp-group "{{ vrrp_groupeB }}" virtual-address "{{ ip_groupeB }}"
+#          - set interfaces "{{ item }}" unit "{{ unitB }}" family inet address "{{ ip_interfaceB }}" vrrp-group "{{ vrrp_groupeB }}" priority "{{ priorityB }}"
+          - set interfaces "{{ item }}" unit "{{ unitB }}" family inet address "{{ ip_interfaceB }}" vrrp-group "{{ vrrp_groupeB }}" preempt hold-time "{{ hold_timeB }}"
+          - set interfaces "{{ item }}" unit "{{ unitB }}" family inet address "{{ ip_interfaceB }}" vrrp-group "{{ vrrp_groupeB }}" accept-data
+#         - "{{ add_commandB }}"
+      loop: "{{ interface_physiqueB }}"
+      when: ansible_net_hostname == "{{ hostnameB }}"
+
+Exemple de variables
+{
+  "delete_interface": ["delete interfaces ge-0/0/10"],
+	"interface_physique" : ["ge-0/0/10"],
+	"unit": 0,
+	"ip_interface": "192.168.0.1/24",
+	"ip_groupe": "192.168.0.2",
+	"vrrp_groupe": 1,
+	"priority": 110,
+  "hold_time": 1,
+	"hostname": "IK03-U23",
+    "delete_interfaceB": ["delete interfaces ge-0/0/10"],
+	"interface_physiqueB": ["ge-0/0/10"],
+	"unitB": 0,
+	"ip_interfaceB": "192.168.0.4/24",
+	"ip_groupeB": "192.168.0.5",
+	"vrrp_groupeB": 1,
+  "priorityB": 110,
+  "hold_timeB": 1,
+	"hostnameB": "IK03-U24",
+}

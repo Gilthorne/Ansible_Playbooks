@@ -1,0 +1,63 @@
+---
+- name: Install microk8s
+  become: yes
+  hosts: nodes
+  tasks:
+    - name: install microk8s
+      community.general.snap:
+        classic: true
+        channel: 1.28
+        name:
+          - microk8s
+
+- name: Ajouter l'uilisateur au groupe microk8s
+  become: yes
+  hosts: nodes
+  tasks:
+    - user:
+        name: "{{ user_dest }}"
+        groups: microk8s
+        append: yes
+    - meta: reset_connection
+
+- name: Changer le proprio du dossier kube
+  become: yes
+  hosts: nodes
+  tasks:
+    - file:
+        path: /home/"{{ user_dest }}"/.kube
+        owner: "{{ user_dest }}"
+        group: "{{ user_dest }}"
+        state: directory
+
+- name: Activer les modules microk8s
+  hosts: nodes
+  become: yes
+  tasks:
+    - copy:
+        src: /etc/ansible/Linscripts/k8s-dashboard-loadbalancer.yml
+        dest: ~/k8s-dashboard-loadbalancer.yml
+      become_user: "{{ become_user}}"
+
+    - name: apply loadbalancer
+      command: microk8s kubectl apply -f ~/k8s-dashboard-loadbalancer.yml
+      become_user: "{{ become_user}}"
+
+    - name: enable dashboard
+      command: microk8s enable dashboard
+
+    - name: enable dns
+      command: microk8s enable dns
+
+    - name: enable metalb
+      command: microk8s enable metallb:"{{ plage_ip }}"
+
+
+- name: Ajouter le provisionneur NFS Subdir
+  hosts: nodes
+  become: yes
+  tasks:
+    - name: Ajouter le repo proviser
+      command: microk8s helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+    - name: Installer le provisionneur NFS Subdir
+      command: microk8s helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server="{{ ip_nfs }}" --set nfs.path="{{ path_nfs }}"

@@ -1,0 +1,79 @@
+---
+- name: Créer des VLANs sur Juniper
+  hosts: nodes
+  connection: ansible.netcommon.netconf
+  vars:
+    vlan_names: "{{ lookup('env', 'vlans') }}"
+    vlan_ids: "{{ lookup('env', 'vlans') }}"
+    vlan_trunk: "{{ lookup('env', 'vlans') }}"
+    vlan_delete: "{{ lookup('env', 'vlans') }}"
+    vlan_to_associate: "{{ lookup('env', 'vlans') }}"
+    interfaces_to_associate: "{{ lookup('env', 'vlans') }}"
+    vlan_unit_associate: "{{ lookup('env','vlans') }}"
+  gather_facts: no
+
+  tasks:
+    - name: Récupérer les informations sur les VLANs
+      junipernetworks.junos.junos_facts:
+        gather_subset: config
+        gather_network_resources: vlans
+      register: existing_vlans
+
+    - name: Création de VLANs
+      include_tasks: create_vlan.yml
+      vars:
+        var_vlan_name: "{{ item.0 }}"
+        var_vlan_id: "{{ item.1 }}"
+      loop: "{{ vlan_names | zip(vlan_ids) | list }}"
+      loop_control:
+        label: "Création du VLAN {{ item.0 }} avec comme ID {{ item.1 }}"
+
+    - name: Suppression de VLANs
+      junipernetworks.junos.junos_vlans:
+        config:
+          - name: "{{ item }}"
+        state: deleted
+      loop:  "{{ vlan_delete }}"
+      loop_control:
+        label: "Suppression du VLAN {{ item }}"
+
+    - name: Association de VLANs
+      junipernetworks.junos.junos_config:
+        lines:
+          - set interfaces "{{ item }}" unit "{{ vlan_unit_associate }}" family ethernet-switching vlan members "{{ vlan_to_associate }}"
+      loop: "{{ interfaces_to_associate }}"
+      loop_control:
+        label: "Association du VLAN {{ vlan_to_associate }} sur l'interface {{ item }} unit {{ vlan_unit_associate }}"
+
+    - name: Désassociation de VLANs
+      junipernetworks.junos.junos_config:
+        lines:
+          - delete interfaces "{{ item }}" unit "{{ vlan_unit_disassociate }}" family ethernet-switching vlan members "{{ vlan_to_disassociate }}"
+      loop: "{{ interfaces_to_disassociate }}"
+      loop_control:
+        label: "Disassociation du VLAN {{ vlan_to_disassociate }} sur l'interface {{ item }} unit {{ vlan_unit_disassociate }}"
+
+    - name: Configurer un port en mode trunk
+      junipernetworks.junos.junos_l2_interfaces:
+        config:
+          - name: "{{ interface_trunk }}"
+            trunk:
+              allowed_vlans: "{{ trunk_members }}"
+      when: vlan_trunk == "True"
+
+exemple de Variables:
+{
+	"vlan_names": ["test27","test28"],
+  "vlan_ids": [27,28],
+  "vlan_trunk": "Yes",
+  "vlan_delete": ["test27","test28"],
+  "vlan_to_associate": "test29",
+  "interfaces_to_associate": ["ge-0/0/22"],
+  "vlan_unit_associate": 0,
+  "vlan_to_disassociate": "test29",
+  "interfaces_to_disassociate": ["ge-0/0/22"],
+  "vlan_unit_disassociate": 0,
+  "vlan_trunk": "True",
+  "interface_trunk": "ge-0/0/22",
+  "trunk_members":"all"
+}

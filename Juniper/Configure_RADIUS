@@ -1,0 +1,34 @@
+- name: configuration du juniper pour faire du dot1x
+  hosts: Juniper
+  connection: ansible.netcommon.netconf
+  gather_facts: no
+  tasks:
+    - name: configuration du juniper pour la connection vers le radius
+      junipernetworks.junos.junos_config:
+        lines:
+          - set access radius-server "{{ adresse_radius }}" port 1812 secret "{{ secret_password }}"
+          - set access profile "{{ profile_name }}" authentication-order radius
+          - set access profile "{{ profile_name }}" radius authentication-server "{{ adresse_radius }}"
+          - set protocols dot1x authenticator authentication-profile-name "{{ profile_name }}"
+
+    - name: configuration des interface juniper pour faire du mac vlan
+      junipernetworks.junos.junos_config:
+        lines:
+          - set protocols dot1x authenticator interface "{{ item }}" mac-radius restrict
+      loop: "{{ interfaces }}"
+
+
+- name: Ajout du juniper dans les clients de connexion radius
+  hosts: Gradius
+  become: yes
+  tasks:
+    - name: ajout du juniper dans le radius
+      lineinfile:
+        dest: /etc/freeradius/3.0/clients.conf
+        line: "\nclient {{ item }} {\n   secret = {{ secret_password }}\n}"
+      loop: "{{ ip_juniper }}"
+
+    - name: Relancer le radius
+      ansible.builtin.service:
+        name: freeradius
+        state: restarted

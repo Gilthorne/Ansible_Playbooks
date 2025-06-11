@@ -1,0 +1,57 @@
+---
+- hosts: haproxy
+  become: yes
+  vars:
+     ip_web1: 172.17.1.8:80
+     ip_web2: 172.17.1.12:80
+     ip_virtuel: 172.17.1.150
+  tasks:
+    - name: Installer HAProxy
+      apt:
+        name:
+          - haproxy
+        state: present
+        update_cache: yes
+
+    - name: Activer HAProxy
+      command: systemctl enable --now haproxy
+
+    - name: Sauvegarder le fichier de configuration original
+      command: cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.bak
+
+    - name: Configurer HAProxy
+      blockinfile:
+        path: /etc/haproxy/haproxy.cfg
+        block: |
+          frontend http_front
+            bind *:80
+            default_backend http_back
+
+          backend http_back
+            balance roundrobin
+            server web1 "{{ ip_web1 }}" check
+            server web2 "{{ ip_web2 }}" check
+      when: grep_output.rc != 0
+
+    - name: Redemarrer HAProxy
+      systemd:
+        name: haproxy
+        state: restarted
+
+- hosts: srv_web
+  become: yes
+  tasks:
+    - name: Installer Apache
+      apt:
+        name:
+          - apache2
+          - php
+        state: present
+        update_cache: yes
+
+
+#    - name: Copie du fichier php pour tester le load balancing
+#      copy:
+#        src: /etc/ansible/script/linux/otherfiles/index.php
+#        dest: /var/www/html/index.php
+

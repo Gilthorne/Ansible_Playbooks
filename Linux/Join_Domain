@@ -1,0 +1,44 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    nouveau_nom: glpitest
+    votre_domaine: tierslieux.pod1
+    votre_utilisateur_admin: administrateur
+    votre_mot_de_passe_admin: AsxDrt1234*
+  tasks:
+    - name: supprimer le fichier hostname
+      ansible.builtin.command:
+        cmd: "sed -i '1d' /etc/hostname"
+
+    - name: hostname
+      ansible.builtin.lineinfile:
+        path: /etc/hostname
+        line: "{{ nouveau_nom }}"
+
+    - name: telecharger les dependance
+      apt:
+        name:
+          - realmd
+          - libnss-sss
+          - libpam-sss
+          - sssd
+          - sssd-tools
+          - adcli
+          - samba-common-bin
+          - oddjob
+          - oddjob-mkhomedir
+          - packagekit
+          - python-pip
+
+    - name: Ajouter la machine au domaine
+      ansible.builtin.expect:
+        command: realm join --user={{ votre_utilisateur_admin }} {{ votre_domaine }}
+        responses:
+          (?i)password: "{{ votre_mot_de_passe_admin }}"
+
+    - name: Redémarrer la machine
+      ansible.builtin.reboot:
+        pre_reboot_delay: 10
+        msg: "reboot dans 10 sec"
+        post_reboot_delay: 30

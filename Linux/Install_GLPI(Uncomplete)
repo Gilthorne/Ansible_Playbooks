@@ -1,0 +1,73 @@
+---
+- hosts: nodes
+  become: yes
+  tasks:
+    - name: Mettre jour le syst�me
+      apt:
+        update_cache: yes
+        upgrade: safe
+
+    - name: Installer les d�pendances n�cessaires
+      apt:
+        name:
+          - apache2
+          - php
+          - php-mysql
+          - php-curl
+          - php-json
+          - php-gd
+          - php-fpm
+          - php-intl
+          - php-ldap
+          - php-xml
+          - php-apcu
+          - libapache2-mod-php
+          - mysql-server
+        state: present
+
+    - name: Telecharger GLPI
+      get_url:
+        url: https://github.com/glpi-project/glpi/releases/download/10.0.11/glpi-10.0.11.tgz
+        dest: /tmp/glpi.tgz
+
+    - name: Extraire GLPI
+      unarchive:
+        src: /tmp/glpi.tgz
+        dest: /var/www/html/
+        remote_src: yes
+
+    - name: Configurer les permissions
+      file:
+        path: /var/www/html/glpi
+        state: directory
+        owner: www-data
+        group: www-data
+        recurse: yes
+
+    - name: Configurer la base de donnees GLPI
+      shell: |
+        mysql -u root -p'sio' -e "CREATE USER 'glpiuser'@'localhost' IDENTIFIED BY 'glpi';"
+        mysql -u root -p'sio' -e "CREATE DATABASE glpidb;"
+        mysql -u root -p'sio' -e "GRANT ALL PRIVILEGES ON glpidb.* TO 'glpiuser'@'localhost';"
+        mysql -u root -p'sio' -e "FLUSH PRIVILEGES;"
+
+    - name: configurer Apache
+      lineinfile:
+        path: /etc/apache2/sites-available/000-default.conf
+        regexp: 'DocumentRoot /var/www/html'
+        line: 'DocumentRoot /var/www/html/glpi'
+
+    - name: modifier la securité des cookie
+      lineinfile:
+        path: /etc/php/8.1/apache2/php.ini
+        regexp: 'session.cookie_http_only ='
+        line: 'sessio,.cookie_http_only = 1'
+
+    - name: Redemarrer Apache
+      service:
+        name: apache2
+        state: restarted
+
+#    - name: supprimer le fichier d'installation
+#      shell: |
+#        rm /var/www/html/glpi/install/install.php

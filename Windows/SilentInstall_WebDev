@@ -1,0 +1,52 @@
+---
+- name: Installation de Webdev
+  hosts: WinServs
+
+  vars_files:
+  - /etc/ansible/vault.yml
+  tasks:
+
+    - name: Installer IIS
+      win_feature:
+        name: Web-Server
+        state: present
+
+    - name: Vérifier si le dossier d'install existe
+      ansible.windows.win_stat:
+        path: C:\WEBDEV2024
+      register: WEBDEV
+
+    - name: Copier le répertoire
+      ansible.windows.win_copy:
+        src: /home/rundeck/PC_SOFT
+        dest: C:\
+
+    - name: Exécuter le fichier .exe
+      ansible.windows.win_shell: C:\PC_SOFT\WEBDEV\INSTALL.EXE /Silent=C:\PC_SOFT\test.ini /LOG=C:\logwebdev /FR
+      when: not WEBDEV.stat.exists
+
+    - name: Supprimer le dossier
+      ansible.windows.win_file:
+        path: C:\PC_SOFT
+        state: absent
+
+    - name: Donner le contrôle total sur le dossier web dev  à tous les utilisateurs
+      ansible.windows.win_acl:
+        path: C:\WEBDEV2024
+        user: Tout le monde
+        rights: FullControl
+        type: allow
+        state: present
+
+
+    - name: Donner le contrôle sur le dossier de registre  total à tous les utilisateurs
+      ansible.windows.win_acl:
+        path: HKLM:\SOFTWARE\Wow6432Node\PC SOFT
+        user: Tout le monde
+        rights: FullControl
+        type: allow
+        state: present
+        inherit: ContainerInherit, ObjectInherit
+
+
+

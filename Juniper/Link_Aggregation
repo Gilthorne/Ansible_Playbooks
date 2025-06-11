@@ -1,0 +1,73 @@
+---
+- name: Exécuter des commandes sur un appareil Juniper
+  hosts: nodes
+  connection: ansible.netcommon.netconf
+  gather_facts: no
+  vars:
+    interface_logique: "{{ lookup('env', 'agregat') }}"
+    interface_physique: "{{ lookup('env', 'agregat') }}"
+    ip_logique: "{{ lookup('env', 'agregat') }}"
+    unit: "{{ lookup('env', 'agregat') }}"
+    description_logique: "{{ lookup('env', 'agregat') }}"
+    description_physique: "{{ lookup('env', 'agregat') }}"
+    vitesse_lien: "{{ lookup('env', 'agregat') }}"
+    vlan_members: "{{ lookup('env', 'agregat') }}"
+    mtu: "{{ lookup('env', 'agregat') }}"
+    delete_interfaces: "{{ lookup('env', 'agregat') }}"
+  tasks:
+
+    - name: supp des configuration des interfaces
+      junipernetworks.junos.junos_config:
+        lines:
+          - "{{ item }}"
+      loop: "{{ delete_interfaces }}"
+
+
+    - name: création des nouvelles configuration des interfaces
+      junipernetworks.junos.junos_interfaces:
+        config:
+          - name: "{{ interface_logique }}"
+            units:
+               - name: "{{ unit }}"
+            enabled: true
+            mtu: "{{ mtu }}"
+            description: "{{ description_logique }}"
+          - name: "{{ item }}"
+            description: "{{ description_physique }}"
+      loop: "{{ interface_physique }}"
+
+    - name: mettre l'interface "{{ interface_logique }}" en mode trunk sur les vlans "{{ vlan_members }}"
+      junipernetworks.junos.junos_l2_interfaces:
+        config:
+          - name: "{{ interface_logique }}"
+            trunk:
+              allowed_vlans: "{{ vlan_members }}"
+
+    - name: config l'interface "{{ interface_logique }}" pour le LACP
+      junipernetworks.junos.junos_config:
+        lines:
+          - set interfaces "{{ interface_logique }}" aggregated-ether-options lacp active
+          - set interfaces "{{ interface_logique }}" aggregated-ether-options lacp periodic fast
+          - set interfaces "{{ interface_logique }}" aggregated-ether-options link-speed "{{ vitesse_lien }}"
+
+    - name: mettre les interface "{{ interface_physique }}" dans l'agregat
+      junipernetworks.junos.junos_config:
+        lines:
+          - set interfaces "{{ item }}" description "{{ description_physique }}"
+          - set interfaces "{{ item }}" speed "{{ vitesse_lien }}"
+          - set interfaces "{{ item }}" ether-options 802.3ad "{{ interface_logique }}"
+      loop: "{{ interface_physique }}"
+
+
+Exemple de variables:
+{
+  "interface_logique": "ae0",
+  "delete_interfaces": ["delete interfaces ge-0/0/20", "delete interfaces ge-0/0/21","delete interfaces ae0"],
+  "interface_physique": ["ge-0/0/20", "ge-0/0/21"],
+  "unit": 0,
+  "description_logique": "interface logique agragat",
+	"description_physique": "interface physique agregat",
+	"vitesse_lien": "1g",
+	"vlan_members": "all",
+  "mtu": 9216
+}
